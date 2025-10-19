@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>台銀黃金存摺 1g 賣出價（自動更新）</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body{font-family:ui-sans-serif,system-ui,"Noto Sans TC",Arial;margin:24px}
+    .wrap{max-width:960px;margin:0 auto}
+    h1{font-size:22px;margin:0 0 10px}
+    .muted{color:#666;font-size:12px;margin-bottom:14px}
+    .card{border:1px solid #eee;border-radius:12px;padding:16px;margin:12px 0}
+    .price{font-size:28px;font-weight:700}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>台銀黃金存摺 1 公克（賣出）</h1>
+  <div class="muted">資料來源：台灣銀行金價（最近報價）｜本頁面每天台北時間 10:03 與 13:03 更新。</div>
+
+  <div class="card">
+    <div>最新價格</div>
+    <div id="price" class="price">—</div>
+    <div id="time" class="muted">—</div>
+  </div>
+
+  <div class="card">
+    <canvas id="chart" height="120"></canvas>
+    <div class="muted">圖表顯示最近 30 筆資料；完整歷史請下載 <a href="data/history.csv">history.csv</a>。</div>
+  </div>
+</div>
+
+<script>
+async function loadJSON(){
+  const r = await fetch('data/tboc_goldpassbook.json', {cache:'no-store'});
+  return await r.json();
+}
+async function loadCSV(){
+  const r = await fetch('data/history.csv', {cache:'no-store'});
+  const txt = await r.text();
+  const lines = txt.trim().split(/\r?\n/);
+  const head = lines.shift().split(',');
+  return lines.map(line=>{
+    const [ts, price] = line.split(',');
+    return {ts, price: Number(price)};
+  });
+}
+(async function(){
+  const cur = await loadJSON();
+  document.getElementById('price').textContent = `NT$ ${cur.price_twd_per_gram.toLocaleString()}/g`;
+  document.getElementById('time').textContent = `更新時間（台北）：${cur.timestamp_taipei}`;
+
+  const hist = await loadCSV();
+  const last = hist.slice(-30); // 近 30 筆
+  const labels = last.map(d => d.ts.replace(' ', '\n'));
+  const values = last.map(d => d.price);
+
+  const ctx = document.getElementById('chart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'NT$/g',
+        data: values,
+        borderColor: '#0b6bcb',
+        backgroundColor: 'rgba(11,107,203,0.12)',
+        fill: true,
+        tension: .2,
+        pointRadius: 2
+      }]
+    },
+    options: {
+      scales: { y: { ticks: { callback: v => 'NT$ ' + v } } },
+      plugins: { legend: { display: false } }
+    }
+  });
+})();
+</script>
+</body>
+</html>
