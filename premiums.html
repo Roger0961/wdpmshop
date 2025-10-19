@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>王鼎 vs 台銀｜溢價比較</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body{font-family:ui-sans-serif,system-ui,"Noto Sans TC",Arial;margin:24px}
+    .wrap{max-width:1080px;margin:0 auto}
+    h1{font-size:22px;margin:0 0 10px}
+    .muted{color:#666;font-size:12px;margin-bottom:14px}
+    table{border-collapse:collapse;width:100%}
+    th,td{padding:8px 10px;border-bottom:1px solid #eee;text-align:right}
+    th:first-child,td:first-child{text-align:left}
+    .pos{color:#c72626}.neg{color:#0a7a38}
+    .card{border:1px solid #eee;border-radius:12px;padding:16px;margin:12px 0}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>王鼎線上牌價 vs 台銀存摺（1g賣出）溢價比較</h1>
+  <div id="meta" class="muted">載入中…</div>
+
+  <div class="card">
+    <table id="tbl">
+      <thead>
+        <tr><th>商品</th><th>規格(g)</th><th>王鼎售價</th><th>台銀基準價</th><th>溢價(元)</th><th>溢價(%)</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 8px;font-size:16px">溢價% 圖表</h3>
+    <canvas id="chart" height="120"></canvas>
+  </div>
+</div>
+
+<script>
+(async function(){
+  const r = await fetch('data/premiums.json', {cache:'no-store'});
+  const data = await r.json();
+  const meta = document.getElementById('meta');
+  meta.textContent = `更新時間（台北）：${data.timestamp_taipei}｜台銀 1g 賣出：NT$ ${data.tboc_gram_sell.toLocaleString()}`;
+
+  const tbody = document.querySelector('#tbl tbody');
+  const rows = [], labels = [], values = [];
+  (data.items || []).forEach(it=>{
+    const cls = (it.premium_pct ?? 0) >= 0 ? 'pos' : 'neg';
+    rows.push(`<tr>
+      <td>${it.label}</td>
+      <td>${it.grams}</td>
+      <td>${it.retail_price_twd.toLocaleString()}</td>
+      <td>${it.tboc_base_twd.toLocaleString()}</td>
+      <td class="${cls}">${it.premium_twd.toLocaleString()}</td>
+      <td class="${cls}">${(it.premium_pct ?? 0).toFixed(2)}%</td>
+    </tr>`);
+    labels.push(it.label); values.push(it.premium_pct ?? 0);
+  });
+  tbody.innerHTML = rows.join('');
+
+  const ctx = document.getElementById('chart').getContext('2d');
+  new Chart(ctx, {
+    type:'bar',
+    data:{ labels, datasets:[{
+      label:'溢價(%)',
+      data:values,
+      backgroundColor: values.map(v=> v>=0?'rgba(199,38,38,.65)':'rgba(10,122,56,.65)'),
+      borderColor: values.map(v=> v>=0?'rgba(199,38,38,1)':'rgba(10,122,56,1)'),
+      borderWidth:1
+    }]},
+    options:{ responsive:true, scales:{ y:{ ticks:{ callback:v=>v+'%' } } } }
+  });
+})();
+</script>
+</body>
+</html>
