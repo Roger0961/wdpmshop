@@ -5,9 +5,6 @@ on:
     - cron: '3 2,5 * * *'   # 02:03 & 05:03 UTC ≈ 台北 10:03、13:03
   workflow_dispatch:
 
-permissions:
-  contents: write      # ← 允許 GITHUB_TOKEN 寫入 repo
-
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -28,11 +25,18 @@ jobs:
       - name: Scrape latest price
         run: |
           python scrape_tboc.py
-
+      - name: Scrape WDPM & compute premiums
+        run: |
+          python scrape_wdpm_and_premiums.py
       - name: Commit & Push data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/tboc_goldpassbook.json data/history.csv || true
+          git add data/tboc_goldpassbook.json data/history.csv
           git commit -m "update tboc gold passbook $(date -u +"%Y-%m-%dT%H:%M:%SZ")" || echo "no changes"
+          git push
+
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/tboc_goldpassbook.json data/history.csv data/premiums.json || true
+          git commit -m "update data $(date -u +"%Y-%m-%dT%H:%M:%SZ")" || echo "no changes"
           git push
